@@ -7,7 +7,13 @@ import s3 from "../config/s3.js";
 
 export const createNote = async (req, res) => {
   try {
-    const { title, content } = req.body;
+    const { title, content, pinned, color, reminder } = req.body;
+
+    if (!title && !content) {
+      return res.status(400).json({
+        message: "Either title or content is required",
+      });
+    }
 
     let imageUrl = "";
 
@@ -30,6 +36,9 @@ export const createNote = async (req, res) => {
       content,
       image: imageUrl,
       user: req.user._id,
+      pinned: pinned === "true" || pinned === true,
+      color: color || "default",
+      reminder: reminder || null,
     });
 
     res.status(201).json(note);
@@ -78,7 +87,7 @@ export const deleteNote = async (req, res) => {
 
 export const updateNote = async (req, res) => {
   try {
-    const { title, content } = req.body;
+    const { title, content, pinned, color, reminder } = req.body;
 
     const note = await Note.findById(req.params.id);
 
@@ -88,8 +97,18 @@ export const updateNote = async (req, res) => {
       });
     }
 
-    note.title = title || note.title;
-    note.content = content || note.content;
+    note.title = title !== undefined ? title : note.title;
+    note.content = content !== undefined ? content : note.content;
+    note.pinned = pinned !== undefined ? pinned : note.pinned;
+    note.color = color !== undefined ? color : note.color;
+    note.reminder = reminder !== undefined ? reminder : note.reminder;
+
+    // Validate that the updated note won't end up empty
+    if (!note.title && !note.content) {
+      return res.status(400).json({
+        message: "Either title or content is required",
+      });
+    }
 
     const updatedNote = await note.save();
 
